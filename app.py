@@ -6,21 +6,20 @@ import datetime
 import traceback
 import re
 import logging
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, redirect, session, flash, jsonify
 from dotenv import load_dotenv
 from groq import Groq
 
 load_dotenv()
 
-# Configure logging
+# -----------------------------
+# System Logging & Paths
+# -----------------------------
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
-# -----------------------------
-# Base Directories & Robust Template Resolution
-# -----------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Check if templates and static are in root or inside a nested ai_firewall_app folder
+# Robust template & static directory resolution for cloud/local
 template_dir = os.path.join(BASE_DIR, "templates")
 if not os.path.exists(template_dir):
     alt_template = os.path.join(BASE_DIR, "ai_firewall_app", "templates")
@@ -36,23 +35,26 @@ if not os.path.exists(static_dir):
 USER_DB_FILE = os.path.join(BASE_DIR, "users.json")
 
 # -----------------------------
-# Flask App Setup
-# -----------------------------
-app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "supersecretkey123")
-
-# -----------------------------
-# Environment Variables & AI Setup
+# API Clients & Secrets
 # -----------------------------
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
-# Rate Limits
-MAX_REQUESTS_PER_MINUTE = 15
-DAILY_LIMIT = 300
+FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "supersecretkey123")
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@example.com")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 
-# In-memory storage fallback if cloud disk writes are restricted
-MEMORY_STORE = {}
+# -----------------------------
+# Flask app
+# -----------------------------
+app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
+app.secret_key = FLASK_SECRET_KEY
+
+# -----------------------------
+# Constants & Usage Limits
+# -----------------------------
+MAX_REQUESTS_PER_MINUTE = 10
+DAILY_LIMIT = 200
 
 # -----------------------------
 # Asynchronous Kafka Audit Streamer (Dezinet Event Architecture)
@@ -84,15 +86,15 @@ kafka_streamer = FirewallKafkaStreamer()
 # -----------------------------
 def call_openai_summary_and_risk(text):
     """
-    Evaluates safety risk and summarizes input text using Groq.
-    Function name preserved for compatibility with the frontend JS fetcher.
+    Returns (summary_text, risk_score_int, risk_reason_str)
+    Executes on high-throughput Groq Llama-3.3-70b inference.
+    Preserves signature compatibility with the frontend JS fetcher.
     """
     if not groq_client:
-        logging.warning("GROQ_API_KEY not configured. Running safe fallback response.")
         return f"Summary preview: {text[:150]}...", 0, "GROQ_API_KEY missing in environment."
 
     try:
-        # 1. Safety & Risk Assessment
+        # --- Risk Assessment ---
         risk_prompt = (
             "You are an AI safety auditor. Return ONLY a JSON object like "
             '{"risk_score": <int 0-100>, "reason": "<short reason>"}\n\n'
@@ -118,7 +120,7 @@ def call_openai_summary_and_risk(text):
                 except Exception:
                     pass
 
-        # 2. Text Summary Generation
+        # --- Summary Generation ---
         summary_prompt = f"Summarize this briefly and simply:\n\n{text}"
         summary_resp = groq_client.chat.completions.create(
             model="llama-3.3-70b-versatile",
@@ -132,59 +134,63 @@ def call_openai_summary_and_risk(text):
         summary_text = summary_resp.choices[0].message.content.strip()
         return summary_text, int(risk_info.get("risk_score", 0)), risk_info.get("reason", "")
 
-    except Exception as e:
-        logging.error(f"Groq Inference Error: {e}")
-        return f"Summary generated: {text[:100]}...", 10, f"Inference note: {str(e)}"
+    except Exception:
+        print("=== GROQ CALL FAILED ===")
+        traceback.print_exc()
+        return "", 0, "Groq API call failed"
 
 # -----------------------------
-# Robust File & Memory Helpers
+# Helpers
 # -----------------------------
 def load_users():
-    global MEMORY_STORE
-    if os.path.exists(USER_DB_FILE):
+    if not os.path.exists(USER_DB_FILE):
         try:
-            with open(USER_DB_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                if isinstance(data, dict):
-                    return data
-        except Exception as e:
-            logging.warning(f"Disk read failed, using memory store: {e}")
-    return MEMORY_STORE
+            with open(USER_DB_FILE, "w", encoding="utf-8") as f:
+                json.dump({}, f)
+        except Exception:
+            return {}
+    try:
+        with open(USER_DB_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
 
 def save_users(users):
-    global MEMORY_STORE
-    MEMORY_STORE = users
     try:
         with open(USER_DB_FILE, "w", encoding="utf-8") as f:
             json.dump(users, f, indent=4)
     except Exception as e:
-        logging.warning(f"Could not persist users.json to disk (falling back to memory): {e}")
+        print(f"Failed to persist users: {e}")
 
 # -----------------------------
-# Direct Working Routes (No Login Barriers)
+# Routes (Direct Access — No OTP/Login Required)
 # -----------------------------
 @app.route('/')
-@app.route('/summarizer')
 def index():
-    username = "guest_user"
+    return redirect('/summarizer')
+
+@app.route('/summarizer')
+def summarizer():
+    # Direct session assignment so the page loads immediately without logging in
+    if 'user' not in session:
+        session['user'] = "guest_user"
+
+    username = session['user']
     users = load_users()
     users.setdefault(username, {"requests": [], "requests_dates": [], "total_requests": 0, "last_request_date": None})
     save_users(users)
-    
+
     today_iso = datetime.date.today().isoformat()
     today_count = sum(1 for d in users[username].get('requests_dates', []) if d == today_iso)
     left_today = max(0, DAILY_LIMIT - today_count)
-    
-    return render_template(
-        'summarizer.html',
-        username="Visitor / Reviewer",
-        left_today=left_today,
-        per_min_limit=MAX_REQUESTS_PER_MINUTE
-    )
+    return render_template('summarizer.html', username=username, left_today=left_today, per_min_limit=MAX_REQUESTS_PER_MINUTE)
 
 @app.route('/summarize', methods=['POST'])
 def summarize():
-    username = "guest_user"
+    if 'user' not in session:
+        session['user'] = "guest_user"
+
+    username = session['user']
     text = request.form.get('user_input', '').strip()
     if not text:
         return jsonify({"status": "error", "message": "Enter text"})
@@ -193,29 +199,29 @@ def summarize():
     users.setdefault(username, {"requests": [], "requests_dates": [], "total_requests": 0, "last_request_date": None})
     user = users[username]
     now = time.time()
-    
-    # Rate limit cleanup
+
+    # Filter out requests older than 60 seconds
     user['requests'] = [t for t in user['requests'] if t >= now - 60]
     if len(user['requests']) >= MAX_REQUESTS_PER_MINUTE:
         wait = int(60 - (now - min(user['requests'])))
         return jsonify({"status": "error", "message": f"Rate limit exceeded. Wait {wait} sec"}), 429
-        
+
     today_iso = datetime.date.today().isoformat()
     today_count = sum(1 for d in user.get('requests_dates', []) if d == today_iso)
     if today_count >= DAILY_LIMIT:
         return jsonify({"status": "error", "message": "Daily limit reached"}), 429
 
-    # Update counts
+    # Update counters
     user['requests'].append(now)
     user['requests_dates'].append(today_iso)
     user['total_requests'] = user.get('total_requests', 0) + 1
     user['last_request_date'] = today_iso
     save_users(users)
 
-    # Inference (Groq)
+    # Call AI Inference Engine (Groq Llama-3.3-70b)
     summary, risk_score, risk_reason = call_openai_summary_and_risk(text)
 
-    # Kafka Telemetry
+    # Emit telemetry event to Kafka audit stream
     kafka_streamer.emit_audit_event(
         username=username,
         risk_score=int(risk_score or 0),
@@ -230,8 +236,65 @@ def summarize():
         "risk_reason": risk_reason or ""
     })
 
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash("Session reset.", "info")
+    return redirect('/summarizer')
+
+@app.route('/admin-login', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '').strip()
+        if email == ADMIN_EMAIL and password == ADMIN_PASSWORD:
+            session['admin_logged_in'] = True
+            return redirect('/admin')
+        else:
+            flash("Invalid admin credentials", "error")
+            return render_template('admin_login.html')
+    return render_template('admin_login.html')
+
+@app.route('/admin')
+def admin_dashboard():
+    if not session.get('admin_logged_in'):
+        return redirect('/admin-login')
+    users = load_users()
+    total_users = len(users)
+    today = datetime.date.today().isoformat()
+    requests_today = sum(1 for u in users.values() if u.get('last_request_date') == today)
+    top_users = sorted(users.items(), key=lambda x: x[1].get('total_requests', 0), reverse=True)[:10]
+    usage_labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    usage_data = []
+    for day in usage_labels:
+        count = 0
+        for u in users.values():
+            lr = u.get('last_request_date')
+            if lr:
+                try:
+                    dt = datetime.datetime.fromisoformat(lr)
+                    if dt.strftime("%a") == day:
+                        count += 1
+                except:
+                    try:
+                        dt2 = datetime.datetime.strptime(lr, "%Y-%m-%d")
+                        if dt2.strftime("%a") == day:
+                            count += 1
+                    except:
+                        pass
+        usage_data.append(count)
+    return render_template(
+        'admin.html',
+        users=users,
+        top_users=top_users,
+        total_users=total_users,
+        requests_today=requests_today,
+        usage_labels=usage_labels,
+        usage_data=usage_data
+    )
+
 # -----------------------------
-# Cloud Entrypoint (Render & Vercel)
+# Cloud Runner Entrypoint (Render & Vercel)
 # -----------------------------
 app = app
 
