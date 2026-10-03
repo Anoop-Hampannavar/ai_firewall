@@ -166,10 +166,18 @@ def _send_email_thread(msg):
         logging.warning("EMAIL_ADDRESS or EMAIL_APP_PASSWORD not set. Skipping SMTP transmission.")
         return
     try:
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=8) as server:
-            server.login(EMAIL_ADDRESS, EMAIL_APP_PASSWORD)
+        # Strip any accidental whitespace from the credentials
+        clean_app_password = EMAIL_APP_PASSWORD.replace(" ", "").strip()
+        clean_email = EMAIL_ADDRESS.strip()
+
+        # Port 587 with STARTTLS works through cloud firewall restrictions
+        with smtplib.SMTP('smtp.gmail.com', 587, timeout=12) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(clean_email, clean_app_password)
             server.send_message(msg)
-            logging.info("[SMTP] Email delivered successfully.")
+            logging.info("[SMTP] Email delivered successfully to inbox.")
     except Exception as e:
         logging.error(f"[SMTP Error] Failed to deliver email: {e}")
 
