@@ -41,7 +41,8 @@ app.secret_key = FLASK_SECRET_KEY
 # -----------------------------
 # Constants
 # -----------------------------
-USER_DB_FILE = "users.json"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+USER_DB_FILE = os.path.join(BASE_DIR, "users.json")
 OTP_STORE = {}
 OTP_EXPIRY = 300  # 5 minutes
 MAX_REQUESTS_PER_MINUTE = 5
