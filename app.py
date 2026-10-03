@@ -12,14 +12,34 @@ from groq import Groq
 
 load_dotenv()
 
-# Configure system logging
+# Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 # -----------------------------
-# Base Directories & Paths
+# Base Directories & Robust Template Resolution
 # -----------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Check if templates and static are in root or inside a nested ai_firewall_app folder
+template_dir = os.path.join(BASE_DIR, "templates")
+if not os.path.exists(template_dir):
+    alt_template = os.path.join(BASE_DIR, "ai_firewall_app", "templates")
+    if os.path.exists(alt_template):
+        template_dir = alt_template
+
+static_dir = os.path.join(BASE_DIR, "static")
+if not os.path.exists(static_dir):
+    alt_static = os.path.join(BASE_DIR, "ai_firewall_app", "static")
+    if os.path.exists(alt_static):
+        static_dir = alt_static
+
 USER_DB_FILE = os.path.join(BASE_DIR, "users.json")
+
+# -----------------------------
+# Flask App Setup
+# -----------------------------
+app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "supersecretkey123")
 
 # -----------------------------
 # Environment Variables & AI Setup
@@ -27,19 +47,12 @@ USER_DB_FILE = os.path.join(BASE_DIR, "users.json")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
-FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "supersecretkey123")
-
-# -----------------------------
-# Flask App Setup
-# -----------------------------
-app = Flask(__name__)
-app.secret_key = FLASK_SECRET_KEY
-
-# -----------------------------
-# Rate Limiting & Usage Constants
-# -----------------------------
+# Rate Limits
 MAX_REQUESTS_PER_MINUTE = 15
 DAILY_LIMIT = 300
+
+# In-memory storage fallback if cloud disk writes are restricted
+MEMORY_STORE = {}
 
 # -----------------------------
 # Asynchronous Kafka Audit Streamer (Dezinet Event Architecture)
@@ -72,10 +85,10 @@ kafka_streamer = FirewallKafkaStreamer()
 def call_openai_summary_and_risk(text):
     """
     Evaluates safety risk and summarizes input text using Groq.
-    Preserves signature compatibility with the frontend JS fetcher.
+    Function name preserved for compatibility with the frontend JS fetcher.
     """
     if not groq_client:
-        logging.warning("GROQ_API_KEY not configured. Running offline fallback.")
+        logging.warning("GROQ_API_KEY not configured. Running safe fallback response.")
         return f"Summary preview: {text[:150]}...", 0, "GROQ_API_KEY missing in environment."
 
     try:
@@ -121,40 +134,38 @@ def call_openai_summary_and_risk(text):
 
     except Exception as e:
         logging.error(f"Groq Inference Error: {e}")
-        traceback.print_exc()
-        return f"Summary generated for input: {text[:100]}...", 10, f"Inference note: {str(e)}"
+        return f"Summary generated: {text[:100]}...", 10, f"Inference note: {str(e)}"
 
 # -----------------------------
-# Helpers
+# Robust File & Memory Helpers
 # -----------------------------
 def load_users():
-    if not os.path.exists(USER_DB_FILE):
+    global MEMORY_STORE
+    if os.path.exists(USER_DB_FILE):
         try:
-            with open(USER_DB_FILE, "w", encoding="utf-8") as f:
-                json.dump({}, f)
+            with open(USER_DB_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    return data
         except Exception as e:
-            logging.error(f"Could not initialize {USER_DB_FILE}: {e}")
-            return {}
-    try:
-        with open(USER_DB_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {}
+            logging.warning(f"Disk read failed, using memory store: {e}")
+    return MEMORY_STORE
 
 def save_users(users):
+    global MEMORY_STORE
+    MEMORY_STORE = users
     try:
         with open(USER_DB_FILE, "w", encoding="utf-8") as f:
             json.dump(users, f, indent=4)
     except Exception as e:
-        logging.error(f"Error saving {USER_DB_FILE}: {e}")
+        logging.warning(f"Could not persist users.json to disk (falling back to memory): {e}")
 
 # -----------------------------
-# Direct Working Routes (No Login Barrier)
+# Direct Working Routes (No Login Barriers)
 # -----------------------------
 @app.route('/')
 @app.route('/summarizer')
 def index():
-    # Direct landing on summarizer with default guest session
     username = "guest_user"
     users = load_users()
     users.setdefault(username, {"requests": [], "requests_dates": [], "total_requests": 0, "last_request_date": None})
@@ -183,7 +194,7 @@ def summarize():
     user = users[username]
     now = time.time()
     
-    # Clean old timestamps (> 60s)
+    # Rate limit cleanup
     user['requests'] = [t for t in user['requests'] if t >= now - 60]
     if len(user['requests']) >= MAX_REQUESTS_PER_MINUTE:
         wait = int(60 - (now - min(user['requests'])))
@@ -194,17 +205,17 @@ def summarize():
     if today_count >= DAILY_LIMIT:
         return jsonify({"status": "error", "message": "Daily limit reached"}), 429
 
-    # Update usage counts
+    # Update counts
     user['requests'].append(now)
     user['requests_dates'].append(today_iso)
     user['total_requests'] = user.get('total_requests', 0) + 1
     user['last_request_date'] = today_iso
     save_users(users)
 
-    # Call AI Inference Engine (Groq Llama-3.3-70b)
+    # Inference (Groq)
     summary, risk_score, risk_reason = call_openai_summary_and_risk(text)
 
-    # Emit telemetry event to Kafka audit stream
+    # Kafka Telemetry
     kafka_streamer.emit_audit_event(
         username=username,
         risk_score=int(risk_score or 0),
@@ -220,7 +231,7 @@ def summarize():
     })
 
 # -----------------------------
-# Cloud WSGI Binding (Render / Vercel)
+# Cloud Entrypoint (Render & Vercel)
 # -----------------------------
 app = app
 
