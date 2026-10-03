@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="padding:20px;">
+  <h2>Welcome, {{ username }}!</h2>
+<p>Requests left today: <b>{{ left_today }}</b> | Per-minute limit: <b>{{ per_min_limit }}</b></p>
+
+<div class="card-row">
+    <div class="card blue">
+        <h3>Daily Limit</h3>
+        <p>{{ left_today }}</p>
+    </div>
+    <div class="card green">
+        <h3>Per-Minute Limit</h3>
+        <p>{{ per_min_limit }}</p>
+    </div>
+    <div class="card purple">
+        <h3>User</h3>
+        <p>{{ username }}</p>
+    </div>
+</div>
+
+<form id="summarize-form" style="margin-top:25px;">
+    <textarea name="user_input" placeholder="Enter text to summarize"></textarea>
+    <button type="submit">Summarize</button>
+</form>
+
+<div id="result"></div>
+
+<script>
+document.getElementById("summarize-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const data = new FormData(form);
+
+    document.getElementById("result").innerHTML =
+        "<p>⏳ Summarizing... please wait...</p>";
+
+    const res = await fetch("{{ url_for('summarize') }}", {
+        method:"POST",
+        body:data
+    });
+
+    const json = await res.json();
+
+    if(json.status==="success"){
+        document.getElementById("result").innerHTML = `
+            <h3>Summary:</h3><p>${json.summary}</p>
+            <h4>Risk Score: ${json.risk_score}</h4>
+            <p>Reason: ${json.risk_reason}</p>
+        `;
+    } else {
+        document.getElementById("result").innerHTML =
+            `<p style="color:red">${json.message}</p>`;
+    }
+});
+</script>
+
+{% endblock %}

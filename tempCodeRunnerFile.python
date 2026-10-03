@@ -1,0 +1,13 @@
+from openai import OpenAI
+
+client = OpenAI(api_key="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")
+
+try:
+    print("Sending request...")
+    r = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": "hi"}]
+    )
+    print("SUCCESS:", r.choices[0].message)
+except Exception as e:
+    print("ERROR:", type(e).__name__, str(e))

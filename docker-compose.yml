@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  ai-firewall:
+    build: .
+    container_name: ai_firewall_gateway
+    ports:
+      - "5000:5000"     # Flask Web / REST UI
+      - "50051:50051"   # High-performance gRPC Firewall Port
+    environment:
+      - FLASK_ENV=production
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - kafka
+
+  kafka:
+    image: vectorized/redpanda:latest
+    container_name: ai_firewall_event_stream
+    command:
+      - redpanda
+      - start
+      - --smp 1
+      - --memory 512M
+      - --overprovisioned
+      - --kafka-addr 0.0.0.0:9092
+    ports:
+      - "9092:9092"

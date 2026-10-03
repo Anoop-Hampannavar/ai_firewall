@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; background-color: #fff; color: #000; }
+    h1, h2, h3 { text-align: center; }
+    .stats { display: flex; justify-content: center; gap: 40px; margin-bottom: 30px; }
+    .stat-box { border: 2px solid #000; padding: 15px 25px; border-radius: 10px; text-align: center; min-width: 160px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 25px; }
+    th, td { border: 1px solid #000; padding: 10px; text-align: left; }
+    th { background-color: #f0f0f0; }
+    a.logout { display: inline-block; margin-top: 20px; text-decoration: none; color: #000; border: 1px solid #000; padding: 6px 12px; border-radius: 6px; }
+    a.logout:hover { background-color: #000; color: #fff; }
+    .charts { display: flex; justify-content: space-around; flex-wrap: wrap; margin-top: 30px; }
+    .chart-box { width: 45%; min-width: 300px; margin-bottom: 30px; }
+  </style>
+</head>
+<body>
+  <h1>Admin Dashboard</h1>
+
+  <div class="stats">
+    <div class="stat-box">
+      <h2>{{ total_users or 0 }}</h2>
+      <p>Total Users</p>
+    </div>
+    <div class="stat-box">
+      <h2>{{ requests_today or 0 }}</h2>
+      <p>Requests Today</p>
+    </div>
+  </div>
+
+  <h3>All Users</h3>
+  <table>
+    <tr>
+      <th>Email</th>
+      <th>Total Requests</th>
+      <th>Last Active</th>
+      <th>Created</th>
+    </tr>
+    {% set users_safe = users or {} %}
+    {% for email, u in users_safe.items() %}
+    <tr>
+      <td>{{ email }}</td>
+      <td>{{ u.total_requests or 0 }}</td>
+      <td>{{ u.last_request_date or '—' }}</td>
+      <td>{{ u.created_at or '—' }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h3 class="mt-4 mb-2">Top 10 Active Users</h3>
+  <table>
+    <tr>
+      <th>Email</th>
+      <th>Total Requests</th>
+      <th>Last Active</th>
+      <th>Created</th>
+    </tr>
+    {% for email, u in top_users %}
+    <tr>
+      <td>{{ email }}</td>
+      <td>{{ u.total_requests or 0 }}</td>
+      <td>{{ u.last_request_date or '—' }}</td>
+      <td>{{ u.created_at or '—' }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <div class="charts">
+    <div class="chart-box">
+      <h3>Weekly Requests</h3>
+      <canvas id="lineChart"></canvas>
+    </div>
+    <div class="chart-box">
+      <h3>Top 10 Users Requests</h3>
+      <canvas id="pieChart"></canvas>
+    </div>
+  </div>
+
+  <div style="text-align:center;">
+    <a href="{{ url_for('logout') }}" class="logout">Logout</a>
+  </div>
+
+  <script>
+    // ---------------- Line Chart ----------------
+    const lineCtx = document.getElementById('lineChart').getContext('2d');
+    const lineChart = new Chart(lineCtx, {
+      type: 'line',
+      data: {
+        labels: {{ usage_labels | tojson }},
+        datasets: [{
+          label: 'Requests per Day',
+          data: {{ usage_data | tojson }},
+          backgroundColor: 'rgba(0, 123, 255, 0.2)',
+          borderColor: 'rgba(0, 123, 255, 1)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      options: { responsive: true, scales: { y: { beginAtZero: true, stepSize: 1 } } }
+    });
+
+    // ---------------- Pie Chart ----------------
+    const pieCtx = document.getElementById('pieChart').getContext('2d');
+    const pieLabels = {{ top_users | map(attribute=0) | list | tojson }};
+    const pieData = {{ top_users | map(attribute=1) | map(attribute='total_requests') | list | tojson }};
+    const pieChart = new Chart(pieCtx, {
+      type: 'pie',
+      data: {
+        labels: pieLabels,
+        datasets: [{
+          label: 'Requests',
+          data: pieData,
+          backgroundColor: ['#007bff','#28a745','#dc3545','#ffc107','#6f42c1','#20c997','#fd7e14','#6610f2','#e83e8c','#17a2b8']
+        }]
+      },
+      options: { responsive: true }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,422 @@
+{
+    "megha": {
+        "password_hash": "megha@123",
+        "created_at": "2025-10-17T01:27:19.520240",
+        "requests": [],
+        "requests_dates": [],
+        "total_requests": 0,
+        "last_request_date": null
+    },
+    "Megha": {
+        "password_hash": "123",
+        "created_at": "2025-10-17T01:27:19.520240",
+        "requests": [],
+        "requests_dates": [],
+        "total_requests": 0,
+        "last_request_date": null
+    },
+    "anoop": {
+        "password_hash": "123456",
+        "created_at": "2025-10-17T01:27:19.520240",
+        "requests": [],
+        "requests_dates": [],
+        "total_requests": 0,
+        "last_request_date": null
+    },
+    "suman": {
+        "password_hash": "121212",
+        "created_at": "2025-10-17T01:27:19.520240",
+        "requests": [],
+        "requests_dates": [],
+        "total_requests": 0,
+        "last_request_date": null
+    },
+    "amogh": {
+        "password_hash": "scrypt:32768:8:1$ezQpLgGVS6ApJne1$1a1adba08ab535f441fe886f70cb6b48cf20e9351ca3451e07e5c3a2f57f28380710b5b866b15cc79445d62ae2005096ce08914785e96e8ebc7833ea35cf9f97",
+        "created_at": "2025-10-16T23:10:15.451336",
+        "requests": [
+            1760674742.234859,
+            1760674777.5341434
+        ],
+        "requests_dates": [
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17"
+        ],
+        "total_requests": 44,
+        "last_request_date": "2025-10-17"
+    },
+    "MEGHA": {
+        "password_hash": "scrypt:32768:8:1$ecwYLQHNYQPcXkss$b7d8dbbd98cb1cefb787f484fddef07b383e2d72dad8917a2b848717b0789416d2809b6a3461ed98a2f0bdfa8d886f46b5fe81c9727b962f5b3009c78a1faa0f",
+        "created_at": "2025-10-17T03:52:14.767984",
+        "requests": [
+            1760677780.6819205
+        ],
+        "requests_dates": [
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17"
+        ],
+        "total_requests": 6,
+        "last_request_date": "2025-10-17"
+    },
+    "ANOOP": {
+        "password_hash": "scrypt:32768:8:1$c7Kzgv9ktcrRIOnS$478c0106807a6dd28f5888d486d80104c8896d07a9c9850677609ce619e3c72c1a935be8a6cd53625191560a50e56131eb2092d00a009fefcc528f4ec61949aa",
+        "created_at": "2025-10-17T05:05:34.707339",
+        "requests": [
+            1760677554.501456
+        ],
+        "requests_dates": [
+            "2025-10-17"
+        ],
+        "total_requests": 1,
+        "last_request_date": "2025-10-17"
+    },
+    "smith": {
+        "password_hash": "scrypt:32768:8:1$nA2jAWrRxv0yWWrF$d244750958e1d17c1f27776e3d14c88aa8e2afe2e0598e11aefbcfea8b21060c7d0bfb1bb9b4be68b567d0727d193bf301452724cd6387b8bfd4f3a8dc80fbc7",
+        "created_at": "2025-10-17T05:06:25.593427",
+        "requests": [],
+        "requests_dates": [],
+        "total_requests": 0,
+        "last_request_date": null
+    },
+    "ravi": {
+        "password_hash": "scrypt:32768:8:1$7Pk9t64ceQvg0Snn$c3f5f183c921df501322dd8477805307620f6ae9580c4fce206a9acceb80033d8196c63bae51d90b7c180b942a9302bbeaafd059f8234390238b3b013c7b9be5",
+        "created_at": "2025-10-17T05:21:41.190117",
+        "requests": [
+            1760678626.9426181,
+            1760678654.972513
+        ],
+        "requests_dates": [
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17"
+        ],
+        "total_requests": 3,
+        "last_request_date": "2025-10-17"
+    },
+    "pratham": {
+        "password_hash": "scrypt:32768:8:1$cnKbZ2gfhGdQRXIo$511878eeff0c245a2f5908f5ce209d55126a2bbee88c5d7ae825f5caa31debc3abc5c262651a2b38a93f9cb13c61298b41d18483ea892a6ee14d028a40afb663",
+        "created_at": "2025-10-17T06:36:00.771526",
+        "requests": [],
+        "requests_dates": [],
+        "total_requests": 0,
+        "last_request_date": null
+    },
+    "shreeshail": {
+        "password_hash": "scrypt:32768:8:1$6hV537iwrO5ZCW22$eb07b31514e3c148727c0fa27a683fd262fdc07902d327b6ab81abfe26a57e0f4c469521cb8d27c5a4ad0d64b20f286bb42aa9a051273597dc8a980f1a4bfb5d",
+        "created_at": "2025-10-17T06:36:42.341031",
+        "requests": [
+            1760683014.008123,
+            1760683050.4995465
+        ],
+        "requests_dates": [
+            "2025-10-17",
+            "2025-10-17"
+        ],
+        "total_requests": 2,
+        "last_request_date": "2025-10-17"
+    },
+    "anand": {
+        "password_hash": "scrypt:32768:8:1$dxQtqXZnNgmgT7Je$05a8c09f04c258d3d3b1df022e7b8ceb14182000e8f7ff3b5d1d6ec8dbd3b1a436b916c164df363546efc1040cb7c25f34d804963a2241dc2a90e652a9026c30",
+        "created_at": "2025-10-17T07:01:26.499693",
+        "requests": [],
+        "requests_dates": [],
+        "total_requests": 0,
+        "last_request_date": null
+    },
+    "ANUP H": {
+        "password_hash": "scrypt:32768:8:1$r9MBIFUqo3cY2KMY$ed1609984eca9d94804fcf8b88cdb712e694017e06710564d7a6cc52f1414ae1a9b640e48e19b358deb61fa3ad1a08ff1d943fa15d1505bf8c17061e8ec51994",
+        "created_at": "2025-10-17T07:19:52.049772",
+        "requests": [],
+        "requests_dates": [],
+        "total_requests": 0,
+        "last_request_date": null
+    },
+    "MEGHA G.S": {
+        "password_hash": "scrypt:32768:8:1$JLUEfKJBdhoWOQQI$882c820034c91da0cc71f06545f58fffc6c52679f314fb0d423136b4a4c7b8bd1168c7b1537d2e4926b6adb76460d556c7699a3130a8c69273b9a408cad029ee",
+        "created_at": "2025-10-17T07:21:02.130155",
+        "requests": [],
+        "requests_dates": [],
+        "total_requests": 0,
+        "last_request_date": null
+    },
+    "SMITH": {
+        "password_hash": "scrypt:32768:8:1$A2rZeZZnFc63RwuB$60331eb2ed0b9fae8841a5fecf8ea59bfce46af0bb6c6e680ae82425ed313465cfc9d4a88def50341016bde630e1936adbe54257e04da8f6e2476c48a5900f92",
+        "created_at": "2025-10-17T07:33:40.530001",
+        "requests": [],
+        "requests_dates": [],
+        "total_requests": 0,
+        "last_request_date": null
+    },
+    "Smith.A": {
+        "password_hash": "scrypt:32768:8:1$l2DZnLLeA6XCMfQS$de200a7b27ba9af62c138b8914c46af388b9827404060a073aa6c460a63df1e1f4550716043ba77e47ad6bf8169645ce75723a0b677aac7b398d58c31a524e8a",
+        "created_at": "2025-10-17T07:37:28.864204",
+        "requests": [],
+        "requests_dates": [],
+        "total_requests": 0,
+        "last_request_date": null
+    },
+    "ANOOP M": {
+        "password_hash": "scrypt:32768:8:1$jRVaTevB1Dp19KaY$6738c25e49bd4d6d9e2cad205c69079302d15e01dbbae63082a9007b6c003ebdb43d0a5a6269807ce3093596567f109580afba9d7262f52401809fbf5736339c",
+        "created_at": "2025-10-17T07:45:47.176622",
+        "requests": [],
+        "requests_dates": [],
+        "total_requests": 0,
+        "last_request_date": null
+    },
+    "anuph047@gmail.com": {
+        "created_at": "2025-10-17T08:45:57.055199",
+        "requests": [
+            1760695826.9633374
+        ],
+        "requests_dates": [
+            "2025-10-17"
+        ],
+        "total_requests": 1,
+        "last_request_date": "2025-10-17"
+    },
+    "sakkappanavarmegha897@gmail.com": {
+        "created_at": "2025-10-17T08:49:32.476003",
+        "requests": [
+            1763180133.2059767,
+            1763180158.9289453
+        ],
+        "requests_dates": [
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-17",
+            "2025-10-19",
+            "2025-10-19",
+            "2025-10-19",
+            "2025-10-19",
+            "2025-10-19",
+            "2025-10-19",
+            "2025-10-19",
+            "2025-11-13",
+            "2025-11-13",
+            "2025-11-13",
+            "2025-11-13",
+            "2025-11-13",
+            "2025-11-13",
+            "2025-11-13",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-15",
+            "2025-11-15",
+            "2025-11-15",
+            "2025-11-15",
+            "2025-11-15",
+            "2025-11-15",
+            "2025-11-15",
+            "2025-11-15",
+            "2025-11-15",
+            "2025-11-15",
+            "2025-11-15",
+            "2025-11-15",
+            "2025-11-15",
+            "2025-11-15",
+            "2025-11-15",
+            "2025-11-15",
+            "2025-11-15",
+            "2025-11-15"
+        ],
+        "total_requests": 83,
+        "last_request_date": "2025-11-15"
+    },
+    "shrishailpatil2233@gmail.com": {
+        "created_at": "2025-10-17T09:01:31.110927",
+        "requests": [],
+        "requests_dates": [],
+        "total_requests": 0,
+        "last_request_date": null
+    },
+    "yashsavant286@gmail.com": {
+        "password_hash": null,
+        "created_at": "2025-11-06T20:44:31.976795",
+        "requests": [
+            1762467605.721213,
+            1762467607.3929427
+        ],
+        "requests_dates": [
+            "2025-11-07",
+            "2025-11-07",
+            "2025-11-07",
+            "2025-11-07",
+            "2025-11-07",
+            "2025-11-07",
+            "2025-11-07",
+            "2025-11-07",
+            "2025-11-07",
+            "2025-11-07"
+        ],
+        "total_requests": 10,
+        "last_request_date": "2025-11-07"
+    },
+    "akoli30649@gmail.com": {
+        "password_hash": null,
+        "created_at": "2025-11-13T02:00:45.005001",
+        "requests": [],
+        "requests_dates": [],
+        "total_requests": 0,
+        "last_request_date": null
+    },
+    "anoopah16@gmail.com": {
+        "password_hash": null,
+        "created_at": "2025-11-13T04:54:04.749682",
+        "requests": [
+            1763018476.6144416,
+            1763018491.6378806
+        ],
+        "requests_dates": [
+            "2025-11-13",
+            "2025-11-13",
+            "2025-11-13",
+            "2025-11-13",
+            "2025-11-13",
+            "2025-11-13",
+            "2025-11-13",
+            "2025-11-13",
+            "2025-11-13",
+            "2025-11-13",
+            "2025-11-13",
+            "2025-11-13",
+            "2025-11-13",
+            "2025-11-13",
+            "2025-11-13",
+            "2025-11-13"
+        ],
+        "total_requests": 16,
+        "last_request_date": "2025-11-13",
+        "strikes": 0,
+        "blocked_until": null,
+        "last_active": "2025-11-13 12:04:31"
+    },
+    "null": {
+        "otp": "324449",
+        "verified": false,
+        "requests": 0,
+        "blocked": false,
+        "strikes": 0
+    },
+    "sumansagar152003@gmail.com": {
+        "created_at": "2025-11-13T20:40:04.152754",
+        "requests": [
+            1763178640.830447
+        ],
+        "requests_dates": [
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-14",
+            "2025-11-15"
+        ],
+        "total_requests": 10,
+        "last_request_date": "2025-11-15"
+    },
+    "hi": {
+        "requests": [
+            1763175803.539248
+        ],
+        "requests_dates": [
+            "2025-11-15"
+        ],
+        "total_requests": 1,
+        "last_request_date": "2025-11-15"
+    }
+}

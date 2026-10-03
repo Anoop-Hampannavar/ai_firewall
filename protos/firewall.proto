@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package aifirewall;
+
+// High-throughput AI Firewall Inter-Service RPC
+service AIFirewallService {
+  rpc InspectPrompt (PromptInspectionRequest) returns (PromptInspectionResponse);
+}
+
+message PromptInspectionRequest {
+  string request_id = 1;
+  string user_id = 2;
+  string prompt_text = 3;
+}
+
+message PromptInspectionResponse {
+  string request_id = 1;
+  bool is_risky = 2;
+  string risk_category = 3; // e.g., "JAILBREAK", "PII_LEAK", "SAFE"
+  float confidence_score = 4;
+  string sanitized_output = 5;
+}

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="display:flex;justify-content:center;align-items:center;height:60vh;">
+  <div style="background:var(--card);padding:30px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.06);text-align:center;width:350px;">
+    <h2>Enter OTP</h2>
+    <p>OTP sent to: <strong>{{ credential }}</strong></p>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, msg in messages %}
+          <div style="color: {% if category=='error' %}red{% elif category=='success' %}green{% else %}black{% endif %}; margin:8px 0;">{{ msg }}
+         </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    
+    <form method="POST">
+      <input type="text" name="otp" placeholder="Enter OTP" required
+             style="width:100%;padding:10px;margin:8px 0;border-radius:6px;border:1px solid #ccc;">
+      <button type="submit"
+              style="width:100%;padding:10px;border-radius:8px;border:none;background:#28a745;color:white;margin-top:8px;">
+        Verify OTP
+      </button>
+    </form>
+
+    <div style="margin-top:12px;text-align:center;">
+      <a href="{{ url_for('otp_login') }}">Resend OTP</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
