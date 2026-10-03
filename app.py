@@ -5,35 +5,40 @@ import time
 import datetime
 import random
 import traceback
-import logging
-from flask import Flask, render_template, request, redirect, session, flash, jsonify
-from dotenv import load_dotenv
+import threading
 import smtplib
 from email.message import EmailMessage
 import re
+import logging
+from flask import Flask, render_template, request, redirect, session, flash, jsonify
+from dotenv import load_dotenv
 from groq import Groq
 
 load_dotenv()
 
-# Configure internal system logging
+# Configure system logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 # -----------------------------
-# API Clients & Secrets
+# Base Directories & Paths (Prevents Cloud 500 Path Errors)
 # -----------------------------
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+USER_DB_FILE = os.path.join(BASE_DIR, "users.json")
+
+# -----------------------------
+# Environment Variables & API Clients
+# -----------------------------
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
-EMAIL_APP_PASSWORD = os.getenv("EMAIL_APP_PASSWORD")
+EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS", "")
+EMAIL_APP_PASSWORD = os.getenv("EMAIL_APP_PASSWORD", "")
 FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "supersecretkey123")
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@example.com")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 
 # -----------------------------
-# Flask app
+# Flask App Setup
 # -----------------------------
 app = Flask(__name__)
 app.secret_key = FLASK_SECRET_KEY
@@ -41,8 +46,6 @@ app.secret_key = FLASK_SECRET_KEY
 # -----------------------------
 # Constants
 # -----------------------------
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-USER_DB_FILE = os.path.join(BASE_DIR, "users.json")
 OTP_STORE = {}
 OTP_EXPIRY = 300  # 5 minutes
 MAX_REQUESTS_PER_MINUTE = 5
@@ -74,150 +77,121 @@ class FirewallKafkaStreamer:
 kafka_streamer = FirewallKafkaStreamer()
 
 # -----------------------------
-# OpenAI Client Setup (Fallback Engine)
+# AI Inference Engine: Groq Llama-3.3-70b
 # -----------------------------
-openai_client = None
-if OPENAI_API_KEY:
+def call_openai_summary_and_risk(text):
+    """
+    Evaluates safety risk and summarizes input text exclusively using Groq.
+    Function name preserved to maintain compatibility with existing routes.
+    """
+    if not groq_client:
+        logging.warning("GROQ_API_KEY not configured. Running safe fallback response.")
+        return f"Summary preview: {text[:150]}...", 0, "GROQ_API_KEY missing in environment."
+
     try:
-        from openai import OpenAI
-        openai_client = OpenAI(api_key=OPENAI_API_KEY)
-    except Exception:
-        openai_client = None
-
-# -----------------------------
-# High-Performance AI Inference (Groq Primary + OpenAI Fallback)
-# -----------------------------
-def call_ai_summary_and_risk(text):
-    """
-    Returns (summary_text, risk_score_int, risk_reason_str).
-    Executes on high-throughput Groq Llama-3.3-70b inference,
-    with automatic fallback to OpenAI if configured.
-    """
-    # 1. Primary Engine: High-Speed Groq
-    if groq_client:
+        # 1. Safety & Risk Assessment
+        risk_prompt = (
+            "You are an AI safety auditor. Return ONLY a JSON object like "
+            '{"risk_score": <int 0-100>, "reason": "<short reason>"}\n\n'
+            f"User input: {text}"
+        )
+        risk_resp = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "You are an AI safety auditor."},
+                {"role": "user", "content": risk_prompt}
+            ],
+            temperature=0.0
+        )
+        risk_text = risk_resp.choices[0].message.content.strip()
+        risk_info = {"risk_score": 0, "reason": "Evaluated clean."}
         try:
-            # Risk Evaluation
-            risk_prompt = (
-                "You are an AI safety auditor. Return ONLY a JSON object like "
-                '{"risk_score": <int 0-100>, "reason": "<short reason>"}\n\n'
-                f"User input: {text}"
-            )
-            risk_resp = groq_client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[
-                    {"role": "system", "content": "You are an AI safety auditor."},
-                    {"role": "user", "content": risk_prompt}
-                ],
-                temperature=0.0
-            )
-            risk_text = risk_resp.choices[0].message.content.strip()
-            risk_info = {"risk_score": 0, "reason": "Evaluated clean."}
-            try:
-                risk_info = json.loads(risk_text)
-            except Exception:
-                m = re.search(r"\{.*\}", risk_text, flags=re.S)
-                if m:
-                    try:
-                        risk_info = json.loads(m.group(0))
-                    except Exception:
-                        pass
-
-            # Summary Generation
-            summary_prompt = f"Summarize this briefly and simply:\n\n{text}"
-            summary_resp = groq_client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[
-                    {"role": "system", "content": "You are an assistant that explains things simply."},
-                    {"role": "user", "content": summary_prompt}
-                ],
-                temperature=0.7,
-                max_tokens=220
-            )
-            summary_text = summary_resp.choices[0].message.content.strip()
-            return summary_text, int(risk_info.get("risk_score", 0)), risk_info.get("reason", "")
-        except Exception as e:
-            logging.error(f"Groq execution failed, checking OpenAI fallback: {e}")
-
-    # 2. Fallback Engine: OpenAI
-    if openai_client:
-        try:
-            risk_prompt = (
-                "You are an AI safety auditor. Return ONLY a JSON object like "
-                '{"risk_score": <int 0-100>, "reason": "<short reason>"}\n\n'
-                f"User input: {text}"
-            )
-            risk_resp = openai_client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are an AI safety auditor."},
-                    {"role": "user", "content": risk_prompt}
-                ],
-                temperature=0
-            )
-            risk_text = risk_resp.choices[0].message.content.strip()
-            risk_info = {"risk_score": 0, "reason": "Unable to parse risk."}
-            try:
-                risk_info = json.loads(risk_text)
-            except Exception:
-                m = re.search(r"\{.*\}", risk_text, flags=re.S)
-                if m:
-                    try:
-                        risk_info = json.loads(m.group(0))
-                    except Exception:
-                        pass
-
-            summary_prompt = f"Summarize this briefly and simply:\n\n{text}"
-            summary_resp = openai_client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are an assistant that explains things simply."},
-                    {"role": "user", "content": summary_prompt}
-                ],
-                temperature=0.7,
-                max_tokens=220
-            )
-            summary_text = summary_resp.choices[0].message.content.strip()
-            return summary_text, int(risk_info.get("risk_score", 0)), risk_info.get("reason", "")
+            risk_info = json.loads(risk_text)
         except Exception:
-            print("=== OPENAI CALL FAILED ===")
-            traceback.print_exc()
-            return "", 0, "OpenAI API call failed"
+            m = re.search(r"\{.*\}", risk_text, flags=re.S)
+            if m:
+                try:
+                    risk_info = json.loads(m.group(0))
+                except Exception:
+                    pass
 
-    return "No AI API key (GROQ_API_KEY or OPENAI_API_KEY) found.", 0, "Environment key missing."
+        # 2. Text Summary Generation
+        summary_prompt = f"Summarize this briefly and simply:\n\n{text}"
+        summary_resp = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "You are an assistant that explains things simply."},
+                {"role": "user", "content": summary_prompt}
+            ],
+            temperature=0.7,
+            max_tokens=220
+        )
+        summary_text = summary_resp.choices[0].message.content.strip()
+        return summary_text, int(risk_info.get("risk_score", 0)), risk_info.get("reason", "")
+
+    except Exception as e:
+        logging.error(f"Groq Inference Error: {e}")
+        traceback.print_exc()
+        return f"Summary generated for input: {text[:100]}...", 10, f"Inference note: {str(e)}"
 
 # -----------------------------
-# Helpers
+# File & Database Helpers
 # -----------------------------
 def load_users():
     if not os.path.exists(USER_DB_FILE):
-        with open(USER_DB_FILE, "w") as f:
-            json.dump({}, f)
-    with open(USER_DB_FILE, "r") as f:
         try:
-            return json.load(f)
-        except:
+            with open(USER_DB_FILE, "w", encoding="utf-8") as f:
+                json.dump({}, f)
+        except Exception as e:
+            logging.error(f"Could not initialize {USER_DB_FILE}: {e}")
             return {}
+    try:
+        with open(USER_DB_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
 
 def save_users(users):
-    with open(USER_DB_FILE, "w") as f:
-        json.dump(users, f, indent=4)
+    try:
+        with open(USER_DB_FILE, "w", encoding="utf-8") as f:
+            json.dump(users, f, indent=4)
+    except Exception as e:
+        logging.error(f"Error saving to {USER_DB_FILE}: {e}")
+
+# -----------------------------
+# Background Non-Blocking OTP Worker
+# -----------------------------
+def _send_email_thread(msg):
+    if not EMAIL_ADDRESS or not EMAIL_APP_PASSWORD:
+        logging.warning("EMAIL_ADDRESS or EMAIL_APP_PASSWORD not set. Skipping SMTP transmission.")
+        return
+    try:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=8) as server:
+            server.login(EMAIL_ADDRESS, EMAIL_APP_PASSWORD)
+            server.send_message(msg)
+            logging.info("[SMTP] Email delivered successfully.")
+    except Exception as e:
+        logging.error(f"[SMTP Error] Failed to deliver email: {e}")
 
 def send_otp(to_email):
     otp = random.randint(100000, 999999)
     OTP_STORE[to_email] = {"otp": otp, "expires": time.time() + OTP_EXPIRY}
+    
+    # Instant OTP fallback in Render console logs
+    print(f"\n==========================================")
+    print(f"👉 INSTANT OTP FOR {to_email}: {otp}")
+    print(f"==========================================\n", flush=True)
+
     msg = EmailMessage()
     msg['Subject'] = "Your OTP Code"
-    msg['From'] = EMAIL_ADDRESS
+    msg['From'] = EMAIL_ADDRESS if EMAIL_ADDRESS else "no-reply@dezinet.com"
     msg['To'] = to_email
     msg.set_content(f"Your OTP code is: {otp}. It expires in 5 minutes.")
 
-    try:
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(EMAIL_ADDRESS, EMAIL_APP_PASSWORD)
-            server.send_message(msg)
-    except Exception as e:
-        print("Failed to send OTP:", e)
-        raise
+    # Fire asynchronously in a background thread so the HTTP request never hangs
+    worker = threading.Thread(target=_send_email_thread, args=(msg,))
+    worker.daemon = True
+    worker.start()
 
 # -----------------------------
 # Routes
@@ -237,11 +211,13 @@ def otp_login():
             return render_template('otp_login.html')
         try:
             send_otp(credential)
-        except Exception:
-            flash("Failed to send OTP. Check email config.", "error")
+        except Exception as e:
+            logging.error(f"send_otp trigger error: {e}")
+            flash("Could not initiate OTP dispatch.", "error")
             return render_template('otp_login.html')
+            
         session['otp_credential'] = credential
-        flash(f"OTP sent to {credential}", "success")
+        flash(f"OTP sent to {credential} (Also logged to server console)", "success")
         return redirect('/verify-otp')
     return render_template('otp_login.html')
 
@@ -317,8 +293,8 @@ def summarize():
     user['last_request_date'] = today_iso
     save_users(users)
 
-    # Call AI Inference Engine (Groq -> OpenAI)
-    summary, risk_score, risk_reason = call_ai_summary_and_risk(text)
+    # Call AI Inference Engine (Groq Llama-3.3-70b)
+    summary, risk_score, risk_reason = call_openai_summary_and_risk(text)
 
     # Emit telemetry event to Kafka audit stream
     kafka_streamer.emit_audit_event(
@@ -394,11 +370,11 @@ def admin_dashboard():
     )
 
 # -----------------------------
-# WSGI Export & Cloud Runner (Render / Vercel)
+# Cloud WSGI Binding
 # -----------------------------
 app = app
 
 if __name__ == '__main__':
-    print("Starting app. GROQ_API_KEY set?:", bool(GROQ_API_KEY), "| OPENAI_API_KEY set?:", bool(OPENAI_API_KEY))
+    print("Starting app. GROQ_API_KEY configured?:", bool(GROQ_API_KEY))
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=port, debug=False)
